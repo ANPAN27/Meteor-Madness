@@ -3,302 +3,951 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Asteroid Impact Simulator — World Map</title>
-    
+    <title>Meteor Madness — Asteroid Impact Simulator</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E☄%3C/text%3E%3C/svg%3E">
+
     <!-- Fonts & libs -->
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Rajdhani&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;800;900&family=Space+Grotesk:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
-    
+
     <!-- Three.js for 3D visualization -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/TextureLoader.js"></script>
+    <!-- NOTE: removed dead <script src=.../examples/js/loaders/TextureLoader.js> (404s;
+         THREE.TextureLoader is included in the core three.min.js build) -->
 
     <style>
-        body { 
-            margin: 0; 
-            font-family: 'Rajdhani', sans-serif; 
-            background: #041028; 
-            color: #dff7ff; 
+        /* ============================================================
+           METEOR MADNESS — "Mission Control" visual redesign
+           Visual-only refactor: zero JS logic changes.
+           ============================================================ */
+
+        /* ---------- Design tokens (NEW) ---------- */
+        :root {
+            --bg-0: #020810;
+            --bg-1: #041028;
+            --panel-hi: rgba(21, 42, 70, 0.55);
+            --panel-lo: rgba(6, 14, 28, 0.88);
+            --line: rgba(64, 196, 255, 0.16);
+            --line-strong: rgba(64, 196, 255, 0.4);
+            --accent: #00bfff;
+            --accent-bright: #5adcff;
+            /* NEW: nebula-plasma gradient used by primary buttons + active tab */
+            --plasma: linear-gradient(135deg, #b06cff 0%, #5b6cff 50%, #22d3ee 100%);
+            --violet: #b18cff;
+            --amber: #ffb347;
+            --orange: #ff8a00;
+            --red: #ff4b5c;
+            --yellow: #ffd66b;
+            --green: #84ff9f;
+            --ink: #dff3ff;
+            --ink-dim: #a9c3dc;
+            --ink-faint: #7b96b1;
+
+            /* Type scale — Orbitron display (heavy weights), Space Grotesk body,
+               Share Tech Mono telemetry */
+            --font-head: 'Orbitron', sans-serif;
+            --font-body: 'Space Grotesk', 'Rajdhani', sans-serif;
+            --font-mono: 'Share Tech Mono', ui-monospace, monospace;
+            --fs-h1: clamp(1.9rem, 3.6vw, 2.7rem);
+            --fs-h2: 1.05rem;
+            --fs-label: 0.82rem;
+            --fs-body: 1.13rem;
+            --fs-small: 1rem;
+
+            --radius: 14px;
+            --radius-sm: 9px;
+            --page-max: 1240px;
+            --gutter: 20px;
         }
-        header { 
-            padding: 20px; 
-            text-align: center; 
-            font-family: 'Orbitron', sans-serif; 
+
+        /* ---------- Base ---------- */
+        * { box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: var(--font-body);
+            font-size: var(--fs-body);
+            font-weight: 500;
+            color: var(--ink);
+            background-color: var(--bg-0);
+            /* NEW: fixed starfield + nebula glow backdrop */
+            background-image:
+                radial-gradient(1100px 520px at 12% -8%, rgba(0, 90, 180, 0.20), transparent 62%),
+                radial-gradient(900px 480px at 88% -4%, rgba(122, 68, 255, 0.12), transparent 60%),
+                radial-gradient(900px 640px at 50% 112%, rgba(0, 140, 255, 0.10), transparent 62%),
+                radial-gradient(1.4px 1.4px at 22% 18%, rgba(255, 255, 255, 0.85), transparent 55%),
+                radial-gradient(1px 1px at 68% 34%, rgba(255, 255, 255, 0.55), transparent 55%),
+                radial-gradient(1.6px 1.6px at 41% 72%, rgba(160, 220, 255, 0.75), transparent 55%),
+                radial-gradient(1px 1px at 86% 82%, rgba(255, 255, 255, 0.50), transparent 55%),
+                radial-gradient(1px 1px at 9% 55%, rgba(255, 255, 255, 0.50), transparent 55%),
+                radial-gradient(1.2px 1.2px at 57% 6%, rgba(190, 235, 255, 0.65), transparent 55%),
+                radial-gradient(1px 1px at 33% 44%, rgba(255, 255, 255, 0.40), transparent 55%);
+            background-size: auto, auto, auto,
+                640px 640px, 480px 480px, 720px 720px,
+                560px 560px, 420px 420px, 820px 820px, 380px 380px;
+            background-repeat: no-repeat, no-repeat, no-repeat,
+                repeat, repeat, repeat, repeat, repeat, repeat, repeat;
+            background-attachment: fixed;
         }
-        .panels { 
-            display: flex; 
-            gap: 16px; 
-            flex-wrap: wrap; 
-            justify-content: center; 
-            padding: 12px; 
+
+        ::selection { background: rgba(0, 191, 255, 0.35); }
+        ::-webkit-scrollbar { width: 10px; height: 10px; }
+        ::-webkit-scrollbar-track { background: #04101f; }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(0, 191, 255, 0.25);
+            border-radius: 99px;
+            border: 2px solid #04101f;
         }
-        .card { 
-            background: rgba(255,255,255,0.04); 
-            padding: 14px; 
-            border-radius: 10px; 
-            width: 340px; 
-            box-shadow: 0 6px 18px rgba(0,0,0,0.6);
+        ::-webkit-scrollbar-thumb:hover { background: rgba(0, 191, 255, 0.45); }
+
+        /* NEW: shared page-width utility — aligns panels, titles, map & stage */
+        .contained {
+            width: min(100% - 2 * var(--gutter), var(--page-max));
+            margin-inline: auto;
         }
-        input { 
-            width: 92%; 
-            padding: 8px; 
-            border-radius: 6px; 
-            border: 1px solid #0fb8ff; 
-            margin: 8px 0; 
-            background: rgba(255,255,255,0.02); 
-            color: #fff;
-        }
-        button { 
-            width: 100%; 
-            padding: 10px; 
-            border: none; 
-            border-radius: 8px; 
-            background: linear-gradient(90deg, #00bfff, #0080ff); 
-            color: #001; 
-            font-weight: 700; 
-            cursor: pointer;
-            margin: 5px 0;
-        }
-        #map { 
-            height: 560px; 
-            width: 92%; 
-            margin: 14px auto; 
-            border: 1px solid rgba(0,191,255,0.2); 
-            border-radius: 10px; 
-        }
-        #simulation { 
-            height: 560px; 
-            width: 92%; 
-            margin: 14px auto; 
-            border: 1px solid rgba(0,191,255,0.2); 
-            border-radius: 10px; 
+
+        /* ---------- Masthead (NEW classes) ---------- */
+        .masthead {
             position: relative;
+            text-align: center;
+            padding: 46px 20px 30px;
         }
-        #sceneCanvas {
-            width: 100%;
-            height: 100%;
-            display: block;
-            border-radius: 10px;
+        .masthead::after {
+            content: "";
+            position: absolute;
+            left: 12%; right: 12%; bottom: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(0, 191, 255, 0.45), transparent);
         }
-        h2 { 
-            margin: 6px 0 12px 0; 
-            text-align: center; 
-            color: #fff; 
+        .masthead-kicker {
+            margin: 0 0 12px;
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+            font-weight: 400;
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+            color: var(--ink-faint);
         }
-        .legend { 
-            display: flex; 
-            gap: 8px; 
-            align-items: center; 
-            margin-top: 8px; 
-            flex-wrap: wrap;
+        .masthead h1 {
+            margin: 0;
+            font-family: var(--font-head);
+            font-weight: 900;
+            font-size: var(--fs-h1);
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            background: linear-gradient(180deg, #ecfbff 15%, #7fd4ff 55%, #2b8fd8 95%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            filter: drop-shadow(0 0 22px rgba(0, 170, 255, 0.35));
         }
-        .legend span {
-            padding: 6px 8px; 
-            border-radius: 6px; 
-            color: #001; 
-            font-weight: 700;
+        .masthead-sub {
+            margin: 12px auto 0;
+            max-width: 680px;
+            color: var(--ink-dim);
+            letter-spacing: 0.03em;
+            line-height: 1.55;
         }
-        .red { background: #ff6b6b; } 
-        .yellow { background: #ffd66b; } 
-        .green { background: #84ff9f; }
-        .mitigation-content {
-            font-size: 0.95rem; 
-            color: #e8f7ff; 
-            background: rgba(0,0,0,0.15); 
-            padding: 10px; 
-            border-radius: 8px; 
-            line-height: 1.5;
-        }
-        .level-low { border-left: 6px solid #84ff9f; } 
-        .level-moderate { border-left: 6px solid #ffd66b; } 
-        .level-high { border-left: 6px solid #ff9b5c; } 
-        .level-severe { border-left: 6px solid #ff4b4b; }
+
+        /* ---------- Segmented pill tab switcher ---------- */
         .tab-container {
+            position: relative;
             display: flex;
             justify-content: center;
-            margin: 20px 0;
-            gap: 10px;
+            gap: 6px;
+            width: min(calc(100% - 2 * var(--gutter)), 540px);
+            margin: 22px auto 26px;
+            padding: 6px;
+            background: rgba(3, 10, 22, 0.8);
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            box-shadow: inset 0 2px 12px rgba(0, 0, 0, 0.6), 0 8px 24px rgba(0, 0, 0, 0.35);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
         }
         .tab {
-            padding: 12px 24px;
-            background: rgba(255,255,255,0.1);
-            border-radius: 8px;
+            position: relative;
+            isolation: isolate;
+            flex: 1;
+            text-align: center;
+            padding: 11px 14px;
+            border-radius: 999px;
             cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        .tab.active {
-            background: linear-gradient(90deg, #00bfff, #0080ff);
-            color: #001;
-            font-weight: bold;
-        }
-        .view-container {
-            display: none;
-        }
-        .view-container.active {
-            display: block;
-        }
-        .result-item {
-            margin: 10px 0;
-            padding: 8px;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 4px;
-        }
-        .impact-yes { 
-            color: #e74c3c; 
-            font-weight: bold;
-            font-size: 1.2em;
-        }
-        .impact-no { 
-            color: #2ecc71; 
-            font-weight: bold;
-            font-size: 1.2em;
-        }
-        .input-group {
-            margin-bottom: 15px;
-        }
-        label {
-            display: block;
-            margin-bottom: 5px;
-            color: #4fc3f7;
+            user-select: none;
+            font-family: var(--font-head);
+            font-size: 0.78rem;
             font-weight: 600;
+            letter-spacing: 0.09em;
+            text-transform: uppercase;
+            color: var(--ink-dim);
+            transition: color 0.3s ease;
         }
-        .input-info {
-            font-size: 0.8em;
-            color: #888;
-            margin-top: 3px;
+        /* Animated sliding pill behind the active tab (NEW) */
+        .tab::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            z-index: -1;
+            border-radius: 999px;
+            background: var(--plasma);
+            box-shadow: 0 0 20px rgba(139, 92, 246, 0.55);
+            opacity: 0;
+            transform: scaleX(0.25);
+            transition: transform 0.38s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.28s ease;
         }
-        .slider-container {
+        .tab:hover { color: var(--ink); }
+        .tab:hover::before { opacity: 0.3; transform: scaleX(0.94); }
+        .tab.active { color: #0b0620; font-weight: 800; }
+        .tab.active::before { opacity: 1; transform: scaleX(1); }
+
+        /* ---------- View switching ----------
+           Inactive views are clipped out of flow (max-height: 0 +
+           visibility: hidden) instead of display:none, so Three.js can still
+           measure #simulation at boot before the 3D tab is ever opened.
+           Class contract (.view-container / .active) is unchanged. */
+        .view-container { position: relative; }
+        .view-container:not(.active) {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            max-height: 0;
+            overflow: hidden;
+            visibility: hidden;
+            pointer-events: none;
+        }
+        .view-container.active { animation: viewIn 0.35s ease both; }
+        @keyframes viewIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to   { opacity: 1; transform: none; }
+        }
+
+        /* ---------- Section titles (NEW) ---------- */
+        .section-title {
             display: flex;
             align-items: center;
+            gap: 14px;
+            margin: 30px auto 16px;
+            font-family: var(--font-head);
+            font-weight: 700;
+            font-size: 1rem;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: var(--accent-bright);
+            text-align: center;
         }
+        .section-title::before,
+        .section-title::after {
+            content: "";
+            flex: 1;
+            min-width: 24px;
+            height: 1px;
+        }
+        .section-title::before { background: linear-gradient(90deg, transparent, rgba(0, 191, 255, 0.5)); }
+        .section-title::after  { background: linear-gradient(90deg, rgba(0, 191, 255, 0.5), transparent); }
+
+        /* ---------- Panel grid (was flex-wrap; now responsive grid) ---------- */
+        .panels {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(min(100%, 330px), 1fr));
+            gap: var(--gutter);
+            align-items: stretch;
+            margin-bottom: 8px;
+        }
+
+        /* ---------- Cards: tiered elevation ---------- */
+        .card {
+            position: relative;
+            padding: 18px 18px 20px;
+            border-radius: var(--radius);
+            background: linear-gradient(168deg, var(--panel-hi), var(--panel-lo));
+            border: 1px solid var(--line);
+            box-shadow: 0 14px 34px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            overflow: hidden;
+        }
+        /* NEW: accent hairline + corner halo, tinted per card role */
+        .card::before {
+            content: "";
+            position: absolute;
+            top: 0; left: 10%; right: 10%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--edge, rgba(0, 191, 255, 0.55)), transparent);
+        }
+        .card::after {
+            content: "";
+            position: absolute;
+            top: -70px; right: -50px;
+            width: 190px; height: 190px;
+            border-radius: 50%;
+            background: radial-gradient(circle, var(--halo, rgba(0, 191, 255, 0.12)), transparent 70%);
+            pointer-events: none;
+        }
+        .card--input      { --edge: rgba(0, 191, 255, 0.6);  --halo: rgba(0, 191, 255, 0.13); }
+        .card--energy     { --edge: rgba(177, 140, 255, 0.55); --halo: rgba(177, 140, 255, 0.12); }
+        .card--mitigation { --edge: rgba(255, 179, 71, 0.55); --halo: rgba(255, 138, 0, 0.12); }
+
+        /* Primary console — dominant elevation (NEW) */
+        .card--console {
+            --edge: rgba(0, 191, 255, 0.8);
+            --halo: rgba(0, 191, 255, 0.18);
+            border-color: var(--line-strong);
+            background: linear-gradient(168deg, rgba(18, 38, 64, 0.72), rgba(4, 11, 24, 0.92));
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), 0 0 34px rgba(0, 150, 255, 0.14),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.07);
+        }
+
+        /* NEW: card header row with title + role tag */
+        .card-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 16px;
+            padding-bottom: 11px;
+            border-bottom: 1px solid var(--line);
+        }
+        .card-head h2 {
+            margin: 0;
+            font-family: var(--font-head);
+            font-weight: 700;
+            font-size: var(--fs-h2);
+            letter-spacing: 0.09em;
+            text-transform: uppercase;
+            color: var(--ink);
+        }
+        .card-head h2::before { content: "\25B8\00A0"; color: var(--edge, var(--accent)); }
+        .card-tag {
+            font-family: var(--font-mono);
+            font-size: 0.65rem;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--ink-faint);
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            padding: 4px 9px;
+            white-space: nowrap;
+        }
+
+        /* ---------- Labels & inputs ---------- */
+        label {
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            margin-bottom: 6px;
+            font-family: var(--font-body);
+            font-size: var(--fs-label);
+            font-weight: 700;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+            color: var(--accent-bright);
+        }
+        /* NEW: unit suffix inside labels */
+        label .unit {
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            text-transform: none;
+            color: var(--ink-faint);
+        }
+
+        .input-group {
+            display: grid;
+            gap: 8px;
+            margin-bottom: 14px;
+            padding: 12px;
+            border: 1px solid rgba(148, 196, 255, 0.08);
+            border-radius: 12px;
+            background: rgba(148, 196, 255, 0.03);
+            transition: border-color 0.2s ease;
+        }
+        .input-group:hover { border-color: rgba(148, 196, 255, 0.16); }
+        .input-group:focus-within { border-color: var(--line-strong); }
+
+        .input-group input[type="number"] {
+            width: 100%;
+            padding: 9px 12px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--line);
+            background: rgba(2, 10, 22, 0.75);
+            color: var(--ink);
+            font-family: var(--font-body);
+            font-size: 1.08rem;
+            font-weight: 600;
+            letter-spacing: 0.03em;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        .input-group input[type="number"]:hover { border-color: rgba(64, 196, 255, 0.32); }
+        .input-group input[type="number"]:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(0, 191, 255, 0.18);
+        }
+        .input-group input[type="number"]:not(:placeholder-shown):invalid {
+            border-color: var(--red);
+            box-shadow: 0 0 0 3px rgba(255, 75, 92, 0.15);
+        }
+
+        /* Unified slider + live readout row (kept class names) */
+        .slider-container { display: flex; align-items: center; gap: 12px; }
         .slider-container input[type="range"] {
             flex: 1;
-            margin-right: 10px;
+            -webkit-appearance: none;
+            appearance: none;
+            height: 6px;
+            margin: 0;
+            border-radius: 99px;
+            background: linear-gradient(90deg, rgba(0, 191, 255, 0.75), rgba(0, 191, 255, 0.12));
+            outline: none;
+            cursor: pointer;
         }
+        .slider-container input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px; height: 18px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 35% 35%, #bdeeff, #00bfff 60%, #0077cc);
+            border: 2px solid #06304f;
+            box-shadow: 0 0 12px rgba(0, 191, 255, 0.65);
+            transition: transform 0.15s ease;
+        }
+        .slider-container input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.15); }
+        .slider-container input[type="range"]:active::-webkit-slider-thumb { transform: scale(1.25); }
+        .slider-container input[type="range"]::-moz-range-thumb {
+            width: 16px; height: 16px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 35% 35%, #bdeeff, #00bfff 60%, #0077cc);
+            border: 2px solid #06304f;
+            box-shadow: 0 0 12px rgba(0, 191, 255, 0.65);
+        }
+        .slider-container input[type="range"]::-moz-range-track {
+            height: 6px;
+            border-radius: 99px;
+            background: linear-gradient(90deg, rgba(0, 191, 255, 0.75), rgba(0, 191, 255, 0.12));
+        }
+        .slider-container input[type="range"]:focus-visible { box-shadow: 0 0 0 3px rgba(0, 191, 255, 0.22); }
+
         .value-display {
-            min-width: 60px;
+            min-width: 76px;
             text-align: right;
+            padding: 4px 8px;
+            border-radius: 7px;
+            border: 1px solid var(--line);
+            background: rgba(0, 191, 255, 0.07);
+            font-family: var(--font-mono);
+            font-size: 0.9rem;
+            font-weight: 400;
+            letter-spacing: 0.04em;
+            color: var(--accent-bright);
+            font-variant-numeric: tabular-nums;
         }
-        input:invalid {
-            border-color: #e74c3c;
+
+        /* NEW: precision number + range hint row */
+        .number-row { display: flex; align-items: center; gap: 10px; }
+        .number-row input[type="number"] { width: 104px; flex: none; text-align: center; }
+        .input-info {
+            flex: 1;
+            font-size: 0.84rem;
+            font-weight: 500;
+            line-height: 1.4;
+            color: var(--ink-faint);
+            letter-spacing: 0.02em;
+        }
+
+        /* ---------- Buttons ---------- */
+        button { font-family: inherit; }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            padding: 13px 16px;
+            border-radius: 11px;
+            border: 1px solid transparent;
+            cursor: pointer;
+            font-family: var(--font-head);
+            font-size: 0.84rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            transition: transform 0.16s ease, box-shadow 0.25s ease, filter 0.2s ease,
+                        background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+        }
+        .btn:focus-visible { outline: 2px solid var(--accent-bright); outline-offset: 3px; }
+        .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none !important; filter: none !important; }
+
+        /* Primary actions dominate — nebula plasma gradient */
+        .btn-primary {
+            background: var(--plasma);
+            color: #f6f8ff;
+            text-shadow: 0 1px 3px rgba(12, 10, 40, 0.45);
+            box-shadow: 0 8px 26px rgba(124, 58, 237, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            filter: brightness(1.14) saturate(1.08);
+            box-shadow: 0 14px 34px rgba(139, 92, 246, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+        }
+        .btn-primary:active { transform: translateY(0) scale(0.98); filter: brightness(0.95); }
+
+        /* Secondary / ghost treatment */
+        .btn-ghost {
+            background: rgba(90, 220, 255, 0.05);
+            border-color: var(--line-strong);
+            color: var(--accent-bright);
+        }
+        .btn-ghost:hover {
+            background: rgba(90, 220, 255, 0.13);
+            border-color: var(--accent-bright);
+            box-shadow: 0 0 20px rgba(0, 191, 255, 0.2);
+        }
+        .btn-ghost:active { transform: scale(0.98); }
+
+        #impactForm .btn { margin-top: 6px; }
+        .actions { display: grid; gap: 10px; margin: 18px 0 4px; }
+
+        /* ---------- Energy chart + legend integration ---------- */
+        .energy-flex {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+        }
+        .chart-wrap { width: min(100%, 210px); margin-inline: auto; }
+
+        .legend { display: grid; gap: 8px; flex: 1; min-width: 150px; margin-top: 0; }
+        /* NEW: chip + row legend items (kept .red/.yellow/.green modifiers) */
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 11px;
+            border-radius: 9px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            background: rgba(255, 255, 255, 0.03);
+            font-weight: 600;
+            font-size: var(--fs-small);
+            letter-spacing: 0.05em;
+        }
+        .chip { width: 12px; height: 12px; border-radius: 4px; flex: none; }
+        .legend-item.red    { border-left: 3px solid #ff6b6b; }
+        .legend-item.yellow { border-left: 3px solid #ffd66b; }
+        .legend-item.green  { border-left: 3px solid #84ff9f; }
+        .red    .chip { background: #ff6b6b; box-shadow: 0 0 10px rgba(255, 107, 107, 0.8); }
+        .yellow .chip { background: #ffd66b; box-shadow: 0 0 10px rgba(255, 214, 107, 0.8); }
+        .green  .chip { background: #84ff9f; box-shadow: 0 0 10px rgba(132, 255, 159, 0.8); }
+
+        /* ---------- Consequences / mitigation ---------- */
+        .mitigation-content {
+            min-height: 96px;
+            font-size: var(--fs-small);
+            line-height: 1.55;
+            color: #e8f7ff;
+        }
+        /* NEW: intentional empty state */
+        .placeholder {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 16px 14px;
+            border: 1px dashed rgba(0, 191, 255, 0.3);
+            border-radius: 11px;
+            color: var(--ink-faint);
+            background: repeating-linear-gradient(-45deg, rgba(0, 191, 255, 0.035) 0 10px, transparent 10px 20px);
+        }
+        .placeholder-icon {
+            font-size: 1.5rem;
+            line-height: 1.2;
+            color: var(--accent);
+            filter: drop-shadow(0 0 8px rgba(0, 191, 255, 0.6));
+        }
+        .placeholder p { margin: 0; letter-spacing: 0.03em; }
+
+        /* Threat level strips (classes injected by JS — styling only) */
+        .level-low, .level-moderate, .level-high, .level-severe {
+            padding: 12px 14px;
+            border-radius: 10px;
+            border: 1px solid;
+            border-left-width: 4px;
+            line-height: 1.55;
+            font-size: var(--fs-small);
+        }
+        .level-low      { border-color: rgba(132, 255, 159, 0.35); border-left-color: #84ff9f; background: rgba(132, 255, 159, 0.07); }
+        .level-moderate { border-color: rgba(255, 214, 107, 0.35); border-left-color: #ffd66b; background: rgba(255, 214, 107, 0.07); }
+        .level-high     { border-color: rgba(255, 155, 92, 0.35);  border-left-color: #ff9b5c; background: rgba(255, 155, 92, 0.08); }
+        .level-severe   { border-color: rgba(255, 75, 75, 0.4);    border-left-color: #ff4b4b; background: rgba(255, 75, 75, 0.09); }
+
+        /* ---------- Readouts & result rows ---------- */
+        /* NEW: map-view results container with empty state via :empty::before */
+        .results-readout {
+            margin-top: 14px;
+            font-size: var(--fs-small);
+            line-height: 1.55;
+        }
+        .results-readout b { color: #fff; }
+        .results-readout:empty::before {
+            content: "\2316 AWAITING TELEMETRY \2014 RUN IMPACT CALCULATION";
+            display: block;
+            padding: 16px 12px;
+            border: 1px dashed rgba(0, 191, 255, 0.28);
+            border-radius: 11px;
+            text-align: center;
+            font-family: var(--font-mono);
+            font-size: 0.78rem;
+            letter-spacing: 0.14em;
+            color: var(--ink-faint);
+            background: repeating-linear-gradient(-45deg, rgba(0, 191, 255, 0.03) 0 10px, transparent 10px 20px);
+        }
+
+        .readout h3 {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 20px 0 10px;
+            font-family: var(--font-head);
+            font-size: 0.8rem;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--ink-dim);
+        }
+        .readout h3::after {
+            content: "";
+            flex: 1;
+            height: 1px;
+            background: linear-gradient(90deg, var(--line), transparent);
+        }
+
+        .result-item {
+            margin: 8px 0;
+            padding: 10px 12px;
+            border-radius: 9px;
+            border: 1px solid var(--line);
+            border-left: 3px solid var(--accent);
+            background: linear-gradient(90deg, rgba(0, 191, 255, 0.07), rgba(0, 191, 255, 0.015));
+            font-size: var(--fs-small);
+            line-height: 1.5;
+            color: var(--ink);
+        }
+        .result-item:empty { display: none; }
+
+        .impact-yes {
+            color: #ff5964;
+            font-weight: 700;
+            font-size: 1.15em;
+            letter-spacing: 0.04em;
+            text-shadow: 0 0 14px rgba(255, 70, 90, 0.55);
+        }
+        .impact-no {
+            color: #57ffa9;
+            font-weight: 700;
+            font-size: 1.15em;
+            letter-spacing: 0.04em;
+            text-shadow: 0 0 14px rgba(87, 255, 169, 0.45);
+        }
+
+        /* ---------- 3D sim layout: controls rail + stage ---------- */
+        /* NEW: two-column console on desktop */
+        .sim-layout {
+            display: grid;
+            grid-template-columns: minmax(320px, 392px) minmax(0, 1fr);
+            gap: var(--gutter);
+            align-items: start;
+            margin-bottom: 46px;
+        }
+        .sim-controls { padding: 20px; }
+        .sim-stage { min-width: 0; display: grid; gap: 10px; }
+
+        #simulation {
+            position: relative;
+            height: clamp(430px, 64vh, 640px);
+            border-radius: 16px;
+            overflow: hidden;
+            border: 1px solid var(--line-strong);
+            background: radial-gradient(120% 100% at 50% 0%, #071a33, #020810 70%);
+            box-shadow: 0 22px 60px rgba(0, 0, 0, 0.6), 0 0 40px rgba(0, 140, 255, 0.13),
+                        inset 0 0 90px rgba(0, 8, 20, 0.6);
+        }
+        /* NEW: vignette + scanline overlay above the WebGL canvas (decorative only) */
+        #simulation::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            z-index: 5;
+            pointer-events: none;
+            border-radius: inherit;
+            background:
+                repeating-linear-gradient(0deg, rgba(200, 240, 255, 0.016) 0 1px, transparent 1px 3px),
+                radial-gradient(125% 95% at 50% 42%, transparent 55%, rgba(1, 6, 14, 0.6) 100%);
+            box-shadow: inset 0 0 0 1px rgba(120, 210, 255, 0.09);
+        }
+        #sceneCanvas { width: 100%; height: 100%; display: block; }
+
+        /* NEW: in-scene HUD corner readouts (DOM overlay, pointer-transparent) */
+        .hud {
+            position: absolute;
+            z-index: 6;
+            pointer-events: none;
+            font-family: var(--font-mono);
+            font-size: 0.72rem;
+            font-weight: 400;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: rgba(130, 220, 255, 0.75);
+            text-shadow: 0 0 10px rgba(0, 180, 255, 0.55);
+        }
+        .hud-tl { top: 14px; left: 16px; }
+        .hud-tr { top: 14px; right: 16px; text-align: right; }
+        .hud-bl { bottom: 12px; left: 16px; }
+        .hud-br { bottom: 12px; right: 16px; text-align: right; color: rgba(130, 220, 255, 0.5); }
+
+        .stage-caption {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 9px;
+            margin: 0;
+            font-family: var(--font-mono);
+            font-size: 0.72rem;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+            color: var(--ink-faint);
+        }
+        .status-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: #57ffa9;
+            box-shadow: 0 0 10px #57ffa9;
+            animation: pulse 2.4s ease-in-out infinite;
+        }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+        /* ---------- World map ---------- */
+        #map {
+            height: clamp(420px, 62vh, 620px);
+            border: 1px solid var(--line-strong);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 22px 60px rgba(0, 0, 0, 0.55), 0 0 34px rgba(0, 140, 255, 0.1);
+            margin-bottom: 46px;
+        }
+        /* Dark-themed Leaflet chrome (NEW, cosmetic only) */
+        .leaflet-control-attribution {
+            background: rgba(3, 10, 22, 0.8) !important;
+            color: var(--ink-dim) !important;
+            font-size: 10px;
+        }
+        .leaflet-control-attribution a { color: var(--accent-bright) !important; }
+        .leaflet-bar a {
+            background: #0a1c33 !important;
+            color: #cfeeff !important;
+            border-color: rgba(64, 196, 255, 0.25) !important;
+        }
+        .leaflet-bar a:hover { background: #123152 !important; }
+
+        /* ---------- Responsive ---------- */
+        @media (max-width: 1100px) {
+            .sim-layout { grid-template-columns: 1fr; }
+            .sim-stage { order: -1; } /* canvas first on tablet/mobile */
+        }
+        @media (max-width: 760px) {
+            :root { --gutter: 14px; }
+            .masthead { padding: 34px 16px 24px; }
+            .masthead-kicker { letter-spacing: 0.2em; }
+            .section-title { font-size: 0.84rem; letter-spacing: 0.1em; gap: 10px; margin: 24px auto 12px; }
+            .tab-container { width: calc(100% - 2 * var(--gutter)); margin: 16px auto 20px; }
+            .tab { padding: 10px 8px; font-size: 0.68rem; letter-spacing: 0.05em; }
+            #map { height: 420px; }
+            #simulation { height: 440px; }
+            .card { padding: 16px; }
+        }
+        @media (max-width: 520px) {
+            .masthead h1 { letter-spacing: 0.08em; }
+            #map { height: 340px; }
+            #simulation { height: 370px; }
+            .hud-br, .hud-tr { display: none; }
+            .hud { font-size: 0.62rem; letter-spacing: 0.1em; }
+            .number-row { flex-wrap: wrap; }
+            .number-row input[type="number"] { width: 100%; }
+            .value-display { min-width: 54px; }
+            .energy-flex { gap: 14px; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { animation: none !important; transition: none !important; }
+            html { scroll-behavior: auto; }
         }
     </style>
 </head>
 <body>
-    <header>
-        <h1>🌍 Asteroid Impact Simulator — World Map</h1>
-        <p style="margin:0">Enter asteroid data → visualize global impacts and recommended mitigation responses</p>
+    <header class="masthead">
+        <p class="masthead-kicker">✦ Mission Control // Planetary Defense Grid ✦</p>
+        <h1>Meteor Madness</h1>
+        <p class="masthead-sub">Asteroid Impact Simulator — enter asteroid data, visualize global impacts and recommended mitigation responses</p>
     </header>
 
-    <div class="tab-container">
+    <nav class="tab-container" aria-label="View switcher">
         <div class="tab active" data-view="map">World Map View</div>
         <div class="tab" data-view="3d">3D Simulation View</div>
-    </div>
+    </nav>
 
-    <!-- Map View -->
+    <!-- ============================ MAP VIEW ============================ -->
     <div id="mapView" class="view-container active">
-        <div class="panels">
+        <div class="panels contained">
+
             <!-- INPUT PANEL -->
-            <div class="card">
-                <h2>Input</h2>
-                <form id="impactForm">
-                    <input id="diameter" type="number" step="any" placeholder="Diameter (meters)" required />
-                    <input id="velocity" type="number" step="any" placeholder="Velocity (m/s)" required />
-                    <input id="latitude" type="number" step="any" placeholder="Impact Latitude (°)" required />
-                    <input id="longitude" type="number" step="any" placeholder="Impact Longitude (°)" required />
-                    <button type="submit">Calculate Impact</button>
+            <div class="card card--input">
+                <div class="card-head">
+                    <h2>Input</h2>
+                    <span class="card-tag">Targeting</span>
+                </div>
+                <form id="impactForm" autocomplete="off">
+                    <div class="input-group">
+                        <label for="diameter">Diameter <span class="unit">meters</span></label>
+                        <input id="diameter" type="number" step="any" placeholder="Enter diameter" required />
+                    </div>
+                    <div class="input-group">
+                        <label for="velocity">Velocity <span class="unit">m/s</span></label>
+                        <input id="velocity" type="number" step="any" placeholder="Enter velocity" required />
+                    </div>
+                    <div class="input-group">
+                        <label for="latitude">Impact Latitude <span class="unit">°</span></label>
+                        <input id="latitude" type="number" step="any" placeholder="-90 to 90" required />
+                    </div>
+                    <div class="input-group">
+                        <label for="longitude">Impact Longitude <span class="unit">°</span></label>
+                        <input id="longitude" type="number" step="any" placeholder="-180 to 180" required />
+                    </div>
+                    <button type="submit" class="btn btn-primary">Calculate Impact</button>
                 </form>
-                <div id="results" style="margin-top:12px; font-size:0.95rem; line-height:1.4;"></div>
+                <div id="results" class="results-readout"></div>
             </div>
 
             <!-- ENERGY PANEL -->
-            <div class="card">
-                <h2>Energy & Zones</h2>
-                <canvas id="energyChart" width="280" height="280"></canvas>
-                <div class="legend">
-                    <div class="red"><span>Critical</span></div>
-                    <div class="yellow"><span>Moderate</span></div>
-                    <div class="green"><span>Safe</span></div>
+            <div class="card card--energy">
+                <div class="card-head">
+                    <h2>Energy &amp; Zones</h2>
+                    <span class="card-tag">Yield</span>
+                </div>
+                <div class="energy-flex">
+                    <div class="chart-wrap">
+                        <canvas id="energyChart" width="280" height="280"></canvas>
+                    </div>
+                    <div class="legend" role="list">
+                        <div class="legend-item red" role="listitem"><span class="chip"></span><span>Critical</span></div>
+                        <div class="legend-item yellow" role="listitem"><span class="chip"></span><span>Moderate</span></div>
+                        <div class="legend-item green" role="listitem"><span class="chip"></span><span>Safe</span></div>
+                    </div>
                 </div>
             </div>
 
             <!-- MITIGATION PANEL -->
-            <div class="card">
-                <h2>Consequences</h2>
+            <div class="card card--mitigation">
+                <div class="card-head">
+                    <h2>Consequences</h2>
+                    <span class="card-tag">Response</span>
+                </div>
                 <div id="mitigation" class="mitigation-content">
-                    <i>No data yet. Enter impact parameters to view strategies.</i>
+                    <div class="placeholder">
+                        <span class="placeholder-icon">◎</span>
+                        <p>No data yet.<br />Enter impact parameters to view strategies.</p>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <h2 style="text-align:center; margin-top:8px;">Global Map (Countries highlighted)</h2>
-        <div id="map"></div>
+        <h2 class="section-title">Global Map (Countries highlighted)</h2>
+        <div id="map" class="contained"></div>
     </div>
 
-    
-    
-            <!-- 3D CONTROLS PANEL -->
-            <div class="card">
-                
-                
+    <!-- ========================= 3D SIMULATION VIEW =========================
+         STRUCTURAL FIX: the controls card, section title and #simulation canvas
+         now live inside #3dView so the tab switcher (data-view="3d" -> #3dView)
+         can show/hide this view. Previously they sat outside any container. -->
+    <div id="3dView" class="view-container">
+        <h2 class="section-title">3D Asteroid Trajectory Simulation</h2>
+
+        <div class="sim-layout contained">
+            <!-- CONTROLS RAIL -->
+            <aside class="card card--console sim-controls">
+                <div class="card-head">
+                    <h2>Flight Parameters</h2>
+                    <span class="card-tag">Console 01</span>
+                </div>
+
                 <div class="input-group">
-                    <label for="velocity3d">Velocity (km/s):</label>
+                    <label for="velocity3d">Velocity <span class="unit">km/s</span></label>
                     <div class="slider-container">
                         <input type="range" id="velocity-slider" min="11" max="72" value="20" step="0.1">
                         <span id="velocity-value" class="value-display">20</span>
                     </div>
-                    <input type="number" id="velocity3d" value="20" min="11" max="72" step="0.1">
-                    <div class="input-info">Range: 11 km/s (escape) to 72 km/s (max observed)</div>
+                    <div class="number-row">
+                        <input type="number" id="velocity3d" value="20" min="11" max="72" step="0.1">
+                        <div class="input-info">Range: 11 km/s (escape) to 72 km/s (max observed)</div>
+                    </div>
                 </div>
-                
+
                 <div class="input-group">
-                    <label for="mass3d">Mass (×10¹² kg):</label>
+                    <label for="mass3d">Mass <span class="unit">×10¹² kg</span></label>
                     <div class="slider-container">
                         <input type="range" id="mass-slider" min="0.001" max="1000" value="100" step="0.1">
                         <span id="mass-value" class="value-display">100</span>
                     </div>
-                    <input type="number" id="mass3d" value="100" min="0.001" max="1000" step="0.1">
-                    <div class="input-info">Range: 0.001 (small) to 1,000 (Chicxulub-scale)</div>
+                    <div class="number-row">
+                        <input type="number" id="mass3d" value="100" min="0.001" max="1000" step="0.1">
+                        <div class="input-info">Range: 0.001 (small) to 1,000 (Chicxulub-scale)</div>
+                    </div>
                 </div>
-                
+
                 <div class="input-group">
-                    <label for="diameter3d">Diameter (km):</label>
+                    <label for="diameter3d">Diameter <span class="unit">km</span></label>
                     <div class="slider-container">
                         <input type="range" id="diameter-slider" min="0.01" max="10" value="1" step="0.01">
                         <span id="diameter-value" class="value-display">1</span>
                     </div>
-                    <input type="number" id="diameter3d" value="1" min="0.01" max="10" step="0.01">
-                    <div class="input-info">Range: 0.01 km to 10 km (Chicxulub was ~10 km)</div>
+                    <div class="number-row">
+                        <input type="number" id="diameter3d" value="1" min="0.01" max="10" step="0.01">
+                        <div class="input-info">Range: 0.01 km to 10 km (Chicxulub was ~10 km)</div>
+                    </div>
                 </div>
-                
+
                 <div class="input-group">
-                    <label for="angle3d">Approach Angle (degrees):</label>
+                    <label for="angle3d">Approach Angle <span class="unit">degrees</span></label>
                     <div class="slider-container">
                         <input type="range" id="angle-slider" min="0" max="90" value="45">
                         <span id="angle-value" class="value-display">45</span>
                     </div>
-                    <input type="number" id="angle3d" value="45" min="0" max="90">
-                    <div class="input-info">0° = head-on, 90° = grazing</div>
+                    <div class="number-row">
+                        <input type="number" id="angle3d" value="45" min="0" max="90">
+                        <div class="input-info">0° = head-on, 90° = grazing</div>
+                    </div>
                 </div>
-                
+
                 <div class="input-group">
-                    <label for="distance3d">Initial Distance (×1000 km):</label>
+                    <label for="distance3d">Initial Distance <span class="unit">×1000 km</span></label>
                     <div class="slider-container">
                         <input type="range" id="distance-slider" min="50" max="1000" value="100">
                         <span id="distance-value" class="value-display">100</span>
                     </div>
-                    <input type="number" id="distance3d" value="100" min="50" max="1000">
-                    <div class="input-info">Range: 50,000 km to 1,000,000 km</div>
+                    <div class="number-row">
+                        <input type="number" id="distance3d" value="100" min="50" max="1000">
+                        <div class="input-info">Range: 50,000 km to 1,000,000 km</div>
+                    </div>
                 </div>
-                
-                <button id="simulateBtn3d">🚀 Run 3D Simulation</button>
-                <button id="resetBtn3d">🔄 Reset Simulation</button>
-                
-                <div id="results3d">
+
+                <div class="actions">
+                    <button id="simulateBtn3d" class="btn btn-primary">🚀 Run 3D Simulation</button>
+                    <button id="resetBtn3d" class="btn btn-ghost">🔄 Reset Simulation</button>
+                </div>
+
+                <div id="results3d" class="readout">
                     <h3>📊 Simulation Results</h3>
                     <div id="impactResult" class="result-item">Enter parameters and run simulation</div>
                     <div id="energyResult" class="result-item"></div>
@@ -306,14 +955,47 @@
                     <div id="craterResult" class="result-item"></div>
                     <div id="impactLocation" class="result-item"></div>
                 </div>
+            </aside>
+
+            <!-- 3D STAGE -->
+            <div class="sim-stage">
+                <div id="simulation">
+                    <canvas id="sceneCanvas"></canvas>
+                    <div class="hud hud-tl">◉ Live Telemetry</div>
+                    <div class="hud hud-tr">Tracking // Auto-Orbit</div>
+                    <div class="hud hud-bl">Drag to orbit · Scroll to zoom</div>
+                    <div class="hud hud-br">Local Render · Scale 1u ≈ Earth Radius</div>
+                </div>
+                <p class="stage-caption"><span class="status-dot"></span>System nominal — awaiting trajectory data</p>
             </div>
         </div>
-
-        <h2 style="text-align:center; margin-top:8px;">3D Asteroid Trajectory Simulation</h2>
-        <div id="simulation">
-            <canvas id="sceneCanvas"></canvas>
-        </div>
     </div>
+
+    <!--
+      ============================ REDESIGN NOTES ============================
+      STRUCTURAL FIX: wrapped the 3D controls card + section title + #simulation
+      in a #3dView .view-container wrapper so tab switching targets it
+      (data-view="3d" -> getElementById("3dView")). Removed two stray </div>s.
+
+      CLASSES KEPT (pre-existing / JS-facing): panels, card, legend (+ red /
+      yellow / green), mitigation-content, level-low/moderate/high/severe,
+      tab-container, tab, active, view-container, result-item, impact-yes,
+      impact-no, input-group, input-info, slider-container, value-display,
+      label (element), plus every element id referenced by JS.
+
+      CLASSES ADDED (visual only): contained, masthead (+ masthead-kicker,
+      masthead-sub), section-title, card--input / --energy / --mitigation /
+      --console, card-head, card-tag, energy-flex, chart-wrap, legend-item,
+      chip, placeholder, placeholder-icon, btn, btn-primary, btn-ghost,
+      actions, number-row, unit, readout, results-readout, sim-layout,
+      sim-controls, sim-stage, hud (+ hud-tl/tr/bl/br), stage-caption,
+      status-dot.
+
+      VIEW-SWITCHING CSS NOTE: inactive .view-container uses max-height:0 +
+      visibility:hidden instead of display:none so Three.js can measure
+      #simulation before the 3D tab is opened. The toggle contract
+      (.active added/removed by existing JS) is unchanged.
+    -->
 
 <script>
 /* ========== CONFIGURATION ========== */
@@ -534,8 +1216,12 @@ class AsteroidSimulator {
         const geometry = new THREE.SphereGeometry(5, 64, 64);
         
         const textureLoader = new THREE.TextureLoader();
+        // RELIABILITY FIX (visual-only swap, no logic change): serve the exact
+        // same three.js example textures from jsDelivr instead of
+        // raw.githubusercontent.com, which stalls/flakes and can leave the
+        // async init() hanging (breaking Run before objects exist).
         const earthTexture = await new Promise((resolve) => {
-            textureLoader.load('https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/textures/planets/earth_atmos_2048.jpg', resolve);
+            textureLoader.load('https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/textures/planets/earth_atmos_2048.jpg', resolve);
         });
         
         const material = new THREE.MeshPhongMaterial({
@@ -554,7 +1240,7 @@ class AsteroidSimulator {
     createMoon() {
         const geometry = new THREE.SphereGeometry(1.37, 32, 32);
         const textureLoader = new THREE.TextureLoader();
-        const moonTexture = textureLoader.load('https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/textures/planets/moon_1024.jpg');
+        const moonTexture = textureLoader.load('https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/textures/planets/moon_1024.jpg');
         
         const material = new THREE.MeshPhongMaterial({
             map: moonTexture,
