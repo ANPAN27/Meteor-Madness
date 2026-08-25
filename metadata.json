@@ -1,0 +1,6 @@
+{
+  "name": "Asteroid Impact Simulator",
+  "description": "Stoic, cinematic tactical terminal and 3D trajectory simulator for kinetic planetary defense and asteroid impact telemetry.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
