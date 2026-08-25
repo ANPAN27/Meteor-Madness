@@ -3,7 +3,7 @@ import { ImpactInputs, FlightParameters3D, SimulationResults, PresetScenario } f
 import { PRESET_SCENARIOS } from '../utils/physics';
 import { soundEffects } from '../utils/audio';
 import { TerminalSlider } from './TerminalSlider';
-import { Play, RotateCcw, ShieldAlert, Flame, ChevronDown, ChevronUp, Radio, Compass, Orbit } from 'lucide-react';
+import { Play, RotateCcw, ShieldAlert, Flame, ChevronDown, ChevronUp, Orbit, X } from 'lucide-react';
 
 interface ControlSidebarProps {
   activeTab: 'map' | '3d';
@@ -27,6 +27,7 @@ interface ControlSidebarProps {
     craterKm: number;
     location: string;
   } | null;
+  onClose: () => void;
 }
 
 export const ControlSidebar: React.FC<ControlSidebarProps> = ({
@@ -41,7 +42,8 @@ export const ControlSidebar: React.FC<ControlSidebarProps> = ({
   onFlight3DChange,
   onRunSim3D,
   onResetSim3D,
-  sim3DResults
+  sim3DResults,
+  onClose
 }) => {
   const [selectedPreset, setSelectedPreset] = useState<string>('');
   const [showAdvanced, setShowAdvanced] = useState<boolean>(false);
@@ -89,9 +91,13 @@ export const ControlSidebar: React.FC<ControlSidebarProps> = ({
             Parameter Matrix
           </span>
         </div>
-        <div className="font-mono text-[9px] text-neutral-400 tracking-wider">
-          TACTICAL TELEMETRY
-        </div>
+        <button
+          onClick={() => { soundEffects.click(); onClose(); }}
+          title="Hide sidebar"
+          className="p-1 rounded-[1px] text-neutral-500 hover:text-[#00d8e6] hover:bg-[#1e222b] transition-colors"
+        >
+          <X className="w-3.5 h-3.5" />
+        </button>
       </div>
 
       {/* Main Content Area */}

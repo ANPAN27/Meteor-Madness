@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { SimulationResults, ImpactInputs, TelemetryLogEntry } from '../types';
 import { simulationService } from '../services/simulationEngine';
-import { Activity, Flame, ShieldAlert, Waves, Compass, Clock } from 'lucide-react';
+import { Activity, Flame, ShieldAlert, Clock } from 'lucide-react';
 
 interface TelemetryDashboardProps {
   simulationResults: SimulationResults | null;
@@ -13,13 +13,10 @@ export const TelemetryDashboard: React.FC<TelemetryDashboardProps> = ({
   inputs
 }) => {
   const [logs, setLogs] = useState<TelemetryLogEntry[]>([]);
+  const prevResultsRef = useRef(simulationResults);
 
   useEffect(() => {
     setLogs(simulationService.getLogs());
-    const interval = setInterval(() => {
-      setLogs(simulationService.getLogs());
-    }, 2000);
-    return () => clearInterval(interval);
   }, [simulationResults]);
 
   const atmosphericLoss = simulationResults ? simulationResults.atmosphericLossPercent : 0;
@@ -228,4 +225,3 @@ export const TelemetryDashboard: React.FC<TelemetryDashboardProps> = ({
     </div>
   );
 };
-

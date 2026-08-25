@@ -32,9 +32,6 @@ class SimulationService {
    * Can be redirected to fetch from `/api/simulate` when backed by a remote server.
    */
   public async runSimulation(inputs: ImpactInputs): Promise<SimulationResults> {
-    // Artificial tactical compute latency for realistic terminal response feel
-    await new Promise((res) => setTimeout(res, 250));
-
     const result = calculateImpactPhysics(inputs);
     this.history.unshift(result);
     if (this.history.length > 20) this.history.pop();

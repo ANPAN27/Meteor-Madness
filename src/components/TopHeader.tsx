@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { ShieldAlert, Volume2, VolumeX, Tv, Radio, Crosshair, Orbit } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { ShieldAlert, Volume2, VolumeX, Tv, Crosshair, Orbit } from 'lucide-react';
 import { soundEffects } from '../utils/audio';
 
 interface TopHeaderProps {
@@ -21,6 +22,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
   soundEnabled,
   onToggleSound
 }) => {
+  const navigate = useNavigate();
   const [timeUtc, setTimeUtc] = useState<string>('');
 
   useEffect(() => {
@@ -53,9 +55,20 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
   return (
     <header className="w-full h-12 bg-[#0e1015] border-b border-[#1e222b] px-4 flex items-center justify-between gap-4 shrink-0 z-30 select-none">
       {/* Brand & Telemetry Identification */}
-      <div className="flex items-center gap-3">
+      <button
+        onClick={() => navigate('/')}
+        className="flex items-center gap-3 hover:opacity-80 transition-opacity cursor-pointer"
+      >
         <div className="flex items-center gap-2 border border-[#1e222b] px-2.5 py-1 bg-[#14171e] rounded-[2px]">
-          <span className="w-2 h-2 rounded-full bg-[#00d8e6] animate-pulse"></span>
+          <svg width="14" height="14" viewBox="0 0 32 32" className="shrink-0">
+            <circle cx="16" cy="16" r="9" fill="none" stroke="#00d8e6" strokeWidth="1.5" />
+            <circle cx="16" cy="16" r="5" fill="none" stroke="#00d8e6" strokeWidth="1" opacity="0.6" />
+            <circle cx="16" cy="16" r="1.5" fill="#00d8e6" />
+            <line x1="16" y1="3" x2="16" y2="10" stroke="#00d8e6" strokeWidth="1.5" />
+            <line x1="16" y1="22" x2="16" y2="29" stroke="#00d8e6" strokeWidth="1.5" />
+            <line x1="3" y1="16" x2="10" y2="16" stroke="#00d8e6" strokeWidth="1.5" />
+            <line x1="22" y1="16" x2="29" y2="16" stroke="#00d8e6" strokeWidth="1.5" />
+          </svg>
           <span className="font-mono text-xs font-semibold tracking-wider text-neutral-200 uppercase">
             MM-SIM-PRTCL <span className="text-neutral-500 font-normal">// V4.0</span>
           </span>
@@ -63,7 +76,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
         <div className="hidden xl:block font-mono text-[10px] text-neutral-400 tracking-wider uppercase border-l border-[#1e222b] pl-3">
           Planetary Defense Telemetry & Kinetic Impact Matrix
         </div>
-      </div>
+      </button>
 
       {/* Center View Switcher Segmented Control */}
       <div className="flex items-center bg-[#090a0d] border border-[#1e222b] p-0.5 rounded-[2px]">
