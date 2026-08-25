@@ -1,6 +1,6 @@
 # Meteor Madness — Asteroid Impact Simulator
 
-An interactive, fully client-side asteroid impact simulator built for the **NASA Space Apps Challenge 2025**. It combines a 2D world map-based impact analysis with a real-time 3D physics trajectory simulation, all in a single HTML file.
+An interactive, fully client-side asteroid impact simulator built for the **NASA Space Apps Challenge 2026**. It combines a 2D world map-based impact analysis with a real-time 3D physics trajectory simulation, all in a single HTML file.
 
 Users input asteroid parameters to visualize impact zones, energy release, affected countries, mitigation strategies, and a realistic 3D collision scenario with Earth.
 
