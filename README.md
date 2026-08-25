@@ -1,241 +1,109 @@
-🌍 Asteroid Impact Simulator — World Map & 3D Visualization
+# Meteor Madness — Asteroid Impact Simulator
 
-An interactive asteroid impact simulation platform that combines a global map-based impact analysis with a real-time 3D physics-based trajectory simulation.
-Users can input asteroid parameters to visualize impact zones, energy release, affected countries, mitigation strategies, and a realistic 3D collision scenario with Earth.
+An interactive, fully client-side asteroid impact simulator built for the **NASA Space Apps Challenge 2025**. It combines a 2D world map-based impact analysis with a real-time 3D physics trajectory simulation, all in a single HTML file.
 
-🚀 Features
-🗺️ World Map Impact Analysis
+Users input asteroid parameters to visualize impact zones, energy release, affected countries, mitigation strategies, and a realistic 3D collision scenario with Earth.
 
-Interactive Leaflet world map
+## Features
 
-Highlights countries affected by impact zones
+### World Map Impact Analysis
+- Interactive Leaflet world map with OpenStreetMap tiles
+- Highlights countries by damage severity (Critical / Moderate / Safe)
+- Animated asteroid trajectory path with auto-zoom to impact site
+- Turf.js-powered geospatial intersection for country-level damage assessment
 
-Visualizes:
+### Impact Calculations
+- Estimated crater diameter, impact energy (Megatons of TNT), and seismic magnitude
+- Dynamic doughnut chart (Chart.js) for energy vs. atmospheric loss visualization
 
-🔴 Critical zone
+### Consequences & Mitigation Engine
+- Threat-level classification: Low, Moderate, High, Severe/Catastrophic
+- Region-aware mitigation strategies (tsunami risk, urban evacuation, climate effects)
+- Technology recommendations scaled to threat level (ground monitoring, kinetic impactors, nuclear deflection)
 
-🟡 Moderate damage zone
+### 3D Asteroid Simulation (Three.js)
+- Real-time 3D trajectory with Newtonian gravitational physics
+- Configurable parameters: velocity, mass, diameter, approach angle, initial distance
+- Visual effects: impact crater, explosion particles, Earth shake, asteroid trail, orbiting moon
+- Impact classification: Airburst, City Destroyer, Civilization Threat, Extinction-Level Event
+- Interactive camera controls (OrbitControls — drag to orbit, scroll to zoom)
 
-🟢 Safe regions
+## Technologies
 
-Animated asteroid trajectory path
+| Technology | Purpose |
+|---|---|
+| HTML5 / CSS3 | Structure, styling, responsive layout |
+| JavaScript (Vanilla) | Core logic, physics simulation |
+| Leaflet.js | Interactive world map |
+| Turf.js | Geospatial calculations (country intersection) |
+| Chart.js | Energy distribution visualization |
+| Three.js + OrbitControls | 3D simulation and rendering |
+| OpenStreetMap | Map tiles |
 
-Automatic map zoom & focus on impact location
+All libraries are loaded via CDN — no build step required.
 
-📊 Impact Calculations
+## Project Structure
 
-Estimated:
-
-Crater diameter
-
-Impact energy (Megatons of TNT)
-
-Seismic magnitude
-
-Dynamic energy distribution chart using Chart.js
-
-Atmospheric loss vs impact energy visualization
-
-🛡️ Consequences & Mitigation Engine
-
-Intelligent threat-level classification:
-
-Low
-
-Moderate
-
-High
-
-Severe / Catastrophic
-
-Region-aware mitigation strategies:
-
-Tsunami risk
-
-Urban evacuation
-
-Climate effects
-
-Technology suggestions:
-
-Ground monitoring
-
-Kinetic impactors
-
-Nuclear deflection (for extreme events)
-
-🌌 3D Asteroid Simulation (Three.js)
-
-Real-time 3D asteroid trajectory
-
-Physics-based gravitational interaction with Earth
-
-Adjustable parameters:
-
-Velocity
-
-Mass
-
-Diameter
-
-Approach angle
-
-Initial distance
-
-Visual effects:
-
-Impact crater
-
-Explosion particles
-
-Earth shake effect
-
-Asteroid trail
-
-Impact classification:
-
-Airburst
-
-City destroyer
-
-Civilization threat
-
-Extinction-level event
-
-🧠 Technologies Used
-Technology	Purpose
--HTML5 / CSS3	Structure & styling
--JavaScript (Vanilla)	Core logic
--Leaflet.js	Interactive world map
--Turf.js	Geospatial calculations
--Chart.js	Energy visualization
--Three.js	3D simulation & rendering
--OrbitControls	Camera interaction
--OpenStreetMap	Map tiles
-
-📁 Project Structure
+```
 .
-├── index.html        # Main application (HTML, CSS, JS)
-├── README.md         # Project documentation
+├── index.html        # Single-file application (HTML + CSS + JS)
+└── README.md         # This file
+```
 
+This project is fully client-side with no backend, no build tools, and no package dependencies.
 
-⚠️ This project is fully client-side and does not require a backend.
+## How to Run
 
-🧪 How It Works
-1️⃣ World Map Simulation
+**Option 1: Direct open** — open `index.html` in any modern browser.
 
-Enter:
-
-Asteroid diameter (meters)
-
-Velocity (m/s)
-
-Latitude & longitude of impact
-
-Click Calculate Impact
-
-The system:
-
-Calculates impact energy
-
-Draws damage zones
-
-Highlights affected countries
-
-Displays mitigation strategies
-
-2️⃣ 3D Simulation
-
-Switch to 3D Simulation View
-
-Adjust sliders or input fields
-
-Click Run 3D Simulation
-
-Watch:
-
-Asteroid trajectory
-
-Earth collision
-
-Impact effects
-
-Damage classification
-
-🧮 Scientific Model (Simplified)
-
-Uses Newtonian gravity
-
-Energy calculation:
-
-E = ½mv²
-
-
-Converted into:
-
-Megatons of TNT
-
-Hiroshima bomb equivalents
-
-Crater and damage scaling based on real-world impact references:
-
-Chelyabinsk
-
-Tunguska
-
-Chicxulub
-
-⚠️ This simulator is educational, not a replacement for real NASA/ESA models.
-
-🖥️ How to Run Locally
-Option 1: Direct Open
-Open index.html in any modern browser
-
-Option 2: Local Server (Recommended)
-# Using VS Code Live Server
-# OR
+**Option 2: Local server (recommended)**
+```bash
 python -m http.server
+# or use VS Code Live Server
+```
+Then visit `http://localhost:8000`.
 
+## How It Works
 
-Then open:
+### Map View
+1. Enter asteroid diameter, velocity, and impact coordinates
+2. Click **Calculate Impact**
+3. The system calculates energy, draws damage zones on the map, highlights affected countries, and displays mitigation strategies
 
-http://localhost:8000
+### 3D Simulation
+1. Switch to the **3D Simulation View** tab
+2. Adjust sliders for velocity, mass, diameter, approach angle, and distance
+3. Click **Run 3D Simulation**
+4. Watch the asteroid trajectory, Earth collision, impact effects, and damage classification
 
-🌐 Browser Compatibility
+## Scientific Model
 
-✔ Chrome (Recommended)
-✔ Edge
-✔ Firefox
-⚠ Safari (WebGL performance may vary)
+Uses simplified Newtonian gravity for trajectory calculation. Impact energy uses `E = 0.5 * m * v^2`, converted to Megatons of TNT and Hiroshima bomb equivalents. Crater and damage scaling are based on real-world reference events (Chelyabinsk, Tunguska, Chicxulub).
 
-🔮 Future Improvements
+> This simulator is educational — not a replacement for real NASA/ESA models.
 
-Real NASA NEO API integration
+## Browser Compatibility
 
-Real-time population impact estimation
+- Chrome (recommended)
+- Edge
+- Firefox
+- Safari (WebGL performance may vary)
 
-Climate & atmospheric simulation
+## Future Improvements
 
-Multiplayer / scenario sharing
+- Real NASA NEO API integration
+- Real-time population impact estimation
+- Climate & atmospheric simulation
+- Multiplayer / scenario sharing
+- Backend-based physics refinement
+- Mobile optimization
 
-Backend-based physics refinement
+## License
 
-Mobile optimization
+Open-source, free to use for educational purposes, hackathons, and research demos.
 
-📜 License
+## Acknowledgements
 
-This project is open-source and free to use for:
-
-Educational purposes
-
-Hackathons
-
-Research demos
-
-⭐ Acknowledgements
-
-OpenStreetMap contributors
-
-Three.js community
-
-Scientific references from NASA & ESA public resources
+- OpenStreetMap contributors
+- Three.js community
+- Scientific references from NASA & ESA public resources
